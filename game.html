@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Tight Lines – Fly Fishing Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet"/>
+<style>
+/* ── RESET & VARS ───────────────────────────────── */
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --sky1:#1a3a5c;--sky2:#0d2035;
+  --water1:#1b4f6e;--water2:#0a2a3e;--water3:#062030;
+  --foam:#c8e6f0;--sun:#f0c060;
+  --green1:#2d5a27;--green2:#1a3a18;
+  --text:#e8f4f0;--muted:#7aacb8;
+  --gold:#d4a843;--red:#c0392b;--green:#27ae60;
+  --ui-bg:rgba(10,28,42,0.88);
+}
+html,body{width:100%;height:100%;overflow:hidden;background:#0d2035;}
+body{font-family:'Source Sans 3',sans-serif;color:var(--text);}
+
+/* ── CANVAS WRAPPER ─────────────────────────────── */
+#gameWrap{position:relative;width:100%;height:100vh;overflow:hidden;}
+canvas{display:block;width:100%;height:100%;}
+
+/* ── UI OVERLAY ─────────────────────────────────── */
+#ui{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;
+}
+
+/* top bar */
+#topBar{
+  position:absolute;top:0;left:0;right:0;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:12px 24px;
+  background:linear-gradient(to bottom,rgba(6,18,30,0.85),transparent);
+}
+#topBar h1{
+  font-family:'Playfair Display',serif;font-size:1.4rem;
+  color:var(--gold);letter-spacing:.05em;
+}
+.stat{text-align:center;}
+.stat .label{font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);}
+.stat .value{font-size:1.3rem;font-weight:600;color:var(--text);}
+
+/* fly selector */
+#flyBar{
+  position:absolute;bottom:0;left:0;right:0;
+  display:flex;justify-content:center;align-items:flex-end;gap:10px;
+  padding:12px 24px 16px;
+  background:linear-gradient(to top,rgba(6,18,30,0.9),transparent);
+  pointer-events:all;
+}
+.fly-btn{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  background:var(--ui-bg);border:2px solid rgba(100,180,200,0.2);
+  border-radius:8px;padding:8px 14px;cursor:pointer;
+  transition:all .2s;color:var(--text);font-family:inherit;
+  font-size:.75rem;letter-spacing:.04em;
+}
+.fly-btn:hover{border-color:var(--gold);transform:translateY(-3px);}
+.fly-btn.active{border-color:var(--gold);background:rgba(212,168,67,.15);}
+.fly-btn .fly-icon{font-size:1.5rem;}
+.fly-btn .fly-name{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+
+/* cast instruction */
+#castHint{
+  position:absolute;left:50%;transform:translateX(-50%);
+  bottom:90px;font-size:.8rem;color:var(--muted);
+  letter-spacing:.08em;text-transform:uppercase;
+  animation:pulse 2s infinite;pointer-events:none;
+}
+@keyframes pulse{0%,100%{opacity:.5;}50%{opacity:1;}}
+
+/* power meter */
+#powerWrap{
+  position:absolute;left:50%;transform:translateX(-50%);
+  bottom:90px;width:200px;
+  display:none;pointer-events:none;
+}
+#powerLabel{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--muted);text-align:center;margin-bottom:4px;}
+#powerBar{height:10px;background:rgba(255,255,255,.1);border-radius:5px;overflow:hidden;}
+#powerFill{height:100%;width:0%;border-radius:5px;
+  background:linear-gradient(to right,#27ae60,#f39c12,#c0392b);
+  transition:width .05s;}
+
+/* hatch alert */
+#hatchAlert{
+  position:absolute;top:70px;left:50%;transform:translateX(-50%);
+  background:var(--ui-bg);border:1px solid var(--gold);
+  border-radius:8px;padding:10px 20px;text-align:center;
+  display:none;pointer-events:none;
+}
+#hatchAlert .hatch-title{font-size:.65rem;text-transform:uppercase;
+  letter-spacing:.1em;color:var(--gold);}
+#hatchAlert .hatch-insect{font-size:1rem;font-weight:600;}
+
+/* bite indicator */
+#biteWrap{
+  position:absolute;left:50%;transform:translateX(-50%);
+  top:50%;margin-top:-60px;
+  display:none;flex-direction:column;align-items:center;gap:8px;
+  pointer-events:all;
+}
+#biteWrap .bite-text{
+  font-family:'Playfair Display',serif;font-style:italic;
+  font-size:2rem;color:var(--gold);
+  animation:popIn .3s cubic-bezier(.175,.885,.32,1.275);
+}
+@keyframes popIn{from{transform:scale(0);}to{transform:scale(1);}}
+#setHookBtn{
+  background:var(--gold);color:#0d2035;border:none;
+  font-family:'Source Sans 3',sans-serif;font-size:.9rem;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;
+  padding:10px 28px;border-radius:6px;cursor:pointer;
+  animation:blink .4s infinite alternate;
+}
+@keyframes blink{from{opacity:1;}to{opacity:.6;}}
+
+/* fight meter */
+#fightWrap{
+  position:absolute;left:50%;transform:translateX(-50%);
+  top:50%;margin-top:20px;width:280px;
+  display:none;pointer-events:all;
+  flex-direction:column;align-items:center;gap:8px;
+}
+#fightLabel{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);}
+#fightTrack{width:100%;height:20px;background:rgba(255,255,255,.1);
+  border-radius:10px;overflow:hidden;position:relative;}
+#fightZone{
+  position:absolute;height:100%;width:30%;border-radius:10px;
+  background:rgba(39,174,96,.4);transition:left .1s;
+}
+#fightMarker{
+  position:absolute;top:0;height:100%;width:6px;border-radius:3px;
+  background:var(--text);transition:left .05s;
+}
+#fightInstruct{font-size:.72rem;color:var(--muted);text-align:center;}
+#fightProgress{width:100%;height:6px;background:rgba(255,255,255,.1);
+  border-radius:3px;overflow:hidden;}
+#fightProgressFill{height:100%;width:0%;background:var(--gold);
+  border-radius:3px;transition:width .1s;}
+
+/* catch popup */
+#catchPopup{
+  position:absolute;left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  background:var(--ui-bg);border:2px solid var(--gold);
+  border-radius:12px;padding:28px 40px;text-align:center;
+  display:none;pointer-events:all;
+  animation:popIn .4s cubic-bezier(.175,.885,.32,1.275);
+  min-width:260px;
+}
+#catchPopup .catch-emoji{font-size:3rem;}
+#catchPopup .catch-species{font-family:'Playfair Display',serif;
+  font-size:1.4rem;color:var(--gold);margin:8px 0 4px;}
+#catchPopup .catch-size{font-size:.85rem;color:var(--muted);}
+#catchPopup .catch-score{font-size:1.8rem;font-weight:600;
+  color:var(--text);margin:10px 0;}
+#catchPopup .catch-bonus{font-size:.75rem;color:#27ae60;margin-bottom:14px;}
+#nextCastBtn{
+  background:transparent;border:1px solid var(--gold);color:var(--gold);
+  font-family:'Source Sans 3',sans-serif;font-size:.85rem;
+  letter-spacing:.08em;text-transform:uppercase;
+  padding:8px 24px;border-radius:6px;cursor:pointer;
+  transition:all .2s;
+}
+#nextCastBtn:hover{background:var(--gold);color:#0d2035;}
+
+/* miss popup */
+#missPopup{
+  position:absolute;left:50%;top:42%;
+  transform:translateX(-50%);
+  font-family:'Playfair Display',serif;font-style:italic;
+  font-size:1.6rem;color:var(--red);
+  display:none;pointer-events:none;
+  animation:fadeUp .4s forwards;
+}
+@keyframes fadeUp{from{opacity:1;transform:translateX(-50%) translateY(0);}
+  to{opacity:0;transform:translateX(-50%) translateY(-40px);}}
+
+/* game over */
+#gameOver{
+  position:absolute;inset:0;background:rgba(6,18,30,.92);
+  display:none;flex-direction:column;align-items:center;
+  justify-content:center;gap:16px;pointer-events:all;
+}
+#gameOver h2{font-family:'Playfair Display',serif;font-size:2.4rem;color:var(--gold);}
+#gameOver .final-score{font-size:3rem;font-weight:600;}
+#gameOver .final-label{font-size:.75rem;text-transform:uppercase;
+  letter-spacing:.12em;color:var(--muted);}
+#gameOver .best-catch{font-size:.9rem;color:var(--muted);margin-top:4px;}
+#playAgainBtn{
+  margin-top:12px;background:var(--gold);color:#0d2035;border:none;
+  font-family:'Source Sans 3',sans-serif;font-size:.9rem;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;
+  padding:12px 36px;border-radius:6px;cursor:pointer;
+  transition:opacity .2s;
+}
+#playAgainBtn:hover{opacity:.85;}
+
+/* nav back */
+#backNav{
+  position:absolute;top:14px;right:24px;
+  pointer-events:all;
+}
+#backNav a{
+  font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--muted);text-decoration:none;
+  border:1px solid rgba(100,180,200,.25);
+  padding:5px 12px;border-radius:4px;
+  transition:color .2s,border-color .2s;
+}
+#backNav a:hover{color:var(--gold);border-color:var(--gold);}
+</style>
+</head>
+<body>
+<div id="gameWrap">
+  <canvas id="c"></canvas>
+
+  <div id="ui">
+    <!-- Top bar -->
+    <div id="topBar">
+      <h1>🎣 Tight Lines</h1>
+      <div style="display:flex;gap:32px;">
+        <div class="stat"><div class="label">Score</div><div class="value" id="scoreVal">0</div></div>
+        <div class="stat"><div class="label">Caught</div><div class="value" id="caughtVal">0</div></div>
+        <div class="stat"><div class="label">Time</div><div class="value" id="timeVal">90</div></div>
+        <div class="stat"><div class="label">Streak</div><div class="value" id="streakVal">0🔥</div></div>
+      </div>
+      <div id="backNav"><a href="flyfishing.html">← Back</a></div>
+    </div>
+
+    <!-- Hatch alert -->
+    <div id="hatchAlert">
+      <div class="hatch-title">Hatch in progress</div>
+      <div class="hatch-insect" id="hatchInsect"></div>
+    </div>
+
+    <!-- Cast hint / power bar -->
+    <div id="castHint">Hold SPACE or tap to cast</div>
+    <div id="powerWrap">
+      <div id="powerLabel">Cast Power</div>
+      <div id="powerBar"><div id="powerFill"></div></div>
+    </div>
+
+    <!-- Bite indicator -->
+    <div id="biteWrap">
+      <div class="bite-text">STRIKE! 🎣</div>
+      <button id="setHookBtn">SET THE HOOK!</button>
+    </div>
+
+    <!-- Fight meter -->
+    <div id="fightWrap">
+      <div id="fightLabel">Keep the marker in the green zone!</div>
+      <div id="fightTrack">
+        <div id="fightZone"></div>
+        <div id="fightMarker"></div>
+      </div>
+      <div id="fightInstruct">Click anywhere or press SPACE to reel</div>
+      <button id="reelBtn" onclick="reelIn()" style="margin-top:8px;background:#2e7d8c;color:#fff;border:none;font-size:.85rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:10px 32px;border-radius:6px;cursor:pointer;pointer-events:all;">🎣 REEL!</button>
+      <div id="fightProgressFill" style="display:none"></div>
+      <div id="fightProgress"><div id="fightProgressFill2" style="height:100%;width:0%;background:var(--gold);border-radius:3px;transition:width .1s;"></div></div>
+    </div>
+
+    <!-- Catch popup -->
+    <div id="catchPopup">
+      <div class="catch-emoji" id="catchEmoji"></div>
+      <div class="catch-species" id="catchSpecies"></div>
+      <div class="catch-size" id="catchSize"></div>
+      <div class="catch-score" id="catchScore"></div>
+      <div class="catch-bonus" id="catchBonus"></div>
+      <button id="nextCastBtn">Cast Again</button>
+    </div>
+
+    <!-- Miss -->
+    <div id="missPopup">Missed it! 😔</div>
+
+    <!-- Fly selector -->
+    <div id="flyBar">
+      <button class="fly-btn active" data-fly="0">
+        <span class="fly-icon">🪰</span><span>Dry Fly</span>
+        <span class="fly-name">Adams #14</span>
+      </button>
+      <button class="fly-btn" data-fly="1">
+        <span class="fly-icon">🪱</span><span>Nymph</span>
+        <span class="fly-name">Hare's Ear</span>
+      </button>
+      <button class="fly-btn" data-fly="2">
+        <span class="fly-icon">🐟</span><span>Streamer</span>
+        <span class="fly-name">Woolly Bugger</span>
+      </button>
+      <button class="fly-btn" data-fly="3">
+        <span class="fly-icon">🦟</span><span>Emerger</span>
+        <span class="fly-name">RS2 #20</span>
+      </button>
+    </div>
+
+    <!-- Game Over -->
+    <div id="gameOver">
+      <h2>Day's End</h2>
+      <div class="final-label">Total Score</div>
+      <div class="final-score" id="finalScore">0</div>
+      <div class="best-catch" id="bestCatch"></div>
+      <button id="playAgainBtn">Fish Again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CANVAS SETUP ─────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── GAME STATE ───────────────────────────────────
+const FLIES = [
+  {name:'Dry Fly',    icon:'🪰', type:'dry',      bonus:['mayfly','caddis']},
+  {name:'Nymph',      icon:'🪱', type:'nymph',    bonus:['stonefly','midge']},
+  {name:'Streamer',   icon:'🐟', type:'streamer', bonus:['sculpin']},
+  {name:'Emerger',    icon:'🦟', type:'emerger',  bonus:['emerger','midge']},
+];
+const FISH = [
+  {name:'Rainbow Trout',  emoji:'🌈', weight:[8,24], score:100, hatch:'mayfly'},
+  {name:'Brown Trout',    emoji:'🟤', weight:[10,28],score:120, hatch:'caddis'},
+  {name:'Brook Trout',    emoji:'✨', weight:[6,18], score:90,  hatch:'stonefly'},
+  {name:'Cutthroat',      emoji:'🔴', weight:[8,22], score:110, hatch:'emerger'},
+  {name:'Whitefish',      emoji:'⚪', weight:[6,14], score:60,  hatch:'midge'},
+  {name:'Bull Trout',     emoji:'🔵', weight:[14,36],score:180, hatch:'sculpin'},
+];
+const HATCHES = [
+  {name:'Pale Morning Dun Mayfly',insect:'🦋 PMD Mayfly',   type:'mayfly'},
+  {name:'Elk Hair Caddis',        insect:'🦗 Caddis Hatch', type:'caddis'},
+  {name:'Stonefly Hatch',         insect:'🪲 Stonefly',     type:'stonefly'},
+  {name:'Midge Cluster',          insect:'🦟 Midge',        type:'midge'},
+  {name:'Emerger Hatch',          insect:'🌿 Emerger',      type:'emerger'},
+];
+
+let state = 'idle'; // idle | charging | drifting | bite | fighting | caught | over
+let score = 0, caught = 0, streak = 0, bestFish = null;
+let timeLeft = 90;
+let selectedFly = 0;
+let power = 0, powerDir = 1;
+let flyX = 0, flyY = 0, flyTargetX = 0, flyTargetY = 0;
+let linePoints = [];
+let fishX = 0, fishY = 0;
+let currentHatch = null, hatchTimer = 0;
+let biteTimeout = null;
+let fightMarker = 50, fightZone = 35, fightProgress = 0;
+let fightDir = 1, fightSpeed = 0;
+let ripples = [];
+let splashes = [];
+let fishSchools = [];
+let bubbles = [];
+let currentFish = null;
+let gameInterval = null;
+
+// ── SCENE DIMENSIONS ─────────────────────────────
+function waterY(){ return canvas.height * 0.48; }
+function bankY(){  return canvas.height * 0.52; }
+
+// ── FISH SCHOOLS (background) ────────────────────
+function initSchools(){
+  fishSchools = [];
+  for(let i=0;i<6;i++){
+    fishSchools.push({
+      x: Math.random()*canvas.width,
+      y: waterY() + 30 + Math.random()*(canvas.height*0.3),
+      dx: (Math.random()-0.5)*0.4,
+      count: 2+Math.floor(Math.random()*4),
+      opacity: 0.08+Math.random()*0.1,
+    });
+  }
+}
+
+// ── RIPPLE / SPLASH ──────────────────────────────
+function addRipple(x,y){
+  ripples.push({x,y,r:2,maxR:40,alpha:0.6,speed:0.8});
+}
+function addSplash(x,y){
+  for(let i=0;i<12;i++){
+    const a=Math.random()*Math.PI*2, s=1+Math.random()*3;
+    splashes.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2,alpha:1,size:2+Math.random()*3});
+  }
+}
+
+// ── BUBBLES ──────────────────────────────────────
+function initBubbles(){
+  bubbles=[];
+  for(let i=0;i<20;i++){
+    bubbles.push({
+      x:Math.random()*canvas.width,
+      y:waterY()+Math.random()*(canvas.height*0.5),
+      r:1+Math.random()*3, speed:0.1+Math.random()*0.3,alpha:0.15+Math.random()*0.2
+    });
+  }
+}
+
+// ── DRAW SCENE ───────────────────────────────────
+function drawScene(){
+  const W=canvas.width, H=canvas.height;
+  const wY=waterY(), bY=bankY();
+
+  // sky gradient
+  const sky=ctx.createLinearGradient(0,0,0,wY);
+  sky.addColorStop(0,'#0a1a2e');
+  sky.addColorStop(0.5,'#1a3a5c');
+  sky.addColorStop(1,'#1e5070');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,wY);
+
+  // sun/moon glow
+  const glow=ctx.createRadialGradient(W*0.75,H*0.12,5,W*0.75,H*0.12,120);
+  glow.addColorStop(0,'rgba(240,192,96,0.25)');
+  glow.addColorStop(1,'transparent');
+  ctx.fillStyle=glow; ctx.fillRect(0,0,W,wY);
+
+  // sun
+  ctx.beginPath();
+  ctx.arc(W*0.75,H*0.12,18,0,Math.PI*2);
+  ctx.fillStyle='rgba(240,200,100,0.9)';ctx.fill();
+
+  // mountains
+  ctx.fillStyle='#0e2a3a';
+  ctx.beginPath();ctx.moveTo(0,wY);
+  for(let x=0;x<=W;x+=60){
+    const peak=wY - 40 - Math.abs(Math.sin(x*0.015+1))*80 - Math.sin(x*0.03)*30;
+    ctx.lineTo(x,peak);
+  }
+  ctx.lineTo(W,wY);ctx.closePath();ctx.fill();
+
+  // trees on bank
+  ctx.fillStyle='#1a3a18';
+  for(let x=0;x<W;x+=22){
+    const h=14+Math.abs(Math.sin(x*0.2))*12;
+    ctx.beginPath();ctx.moveTo(x,bY);
+    ctx.lineTo(x+11,bY-h);ctx.lineTo(x+22,bY);ctx.closePath();ctx.fill();
+  }
+  // bank/grass
+  const bank=ctx.createLinearGradient(0,bY,0,bY+18);
+  bank.addColorStop(0,'#2d5a27');bank.addColorStop(1,'#1a3010');
+  ctx.fillStyle=bank;ctx.fillRect(0,bY,W,18);
+
+  // water body
+  const water=ctx.createLinearGradient(0,wY,0,H);
+  water.addColorStop(0,'#1b5070');
+  water.addColorStop(0.3,'#0e3550');
+  water.addColorStop(1,'#062030');
+  ctx.fillStyle=water;ctx.fillRect(0,wY,W,H-wY);
+
+  // water shimmer lines
+  ctx.strokeStyle='rgba(180,230,255,0.06)';ctx.lineWidth=1;
+  for(let i=0;i<8;i++){
+    const y=wY+20+i*((H-wY-20)/8);
+    ctx.beginPath();ctx.moveTo(0,y);
+    for(let x=0;x<W;x+=40){
+      ctx.lineTo(x+20,y+Math.sin(x*0.05+Date.now()*0.001+i)*2);
+    }
+    ctx.stroke();
+  }
+
+  // water surface highlight
+  const surf=ctx.createLinearGradient(0,wY,0,wY+16);
+  surf.addColorStop(0,'rgba(180,230,255,0.18)');
+  surf.addColorStop(1,'transparent');
+  ctx.fillStyle=surf;ctx.fillRect(0,wY,W,16);
+
+  // fish schools (background)
+  fishSchools.forEach(s=>{
+    s.x+=s.dx;
+    if(s.x<-60)s.x=W+60;
+    if(s.x>W+60)s.x=-60;
+    ctx.save();ctx.globalAlpha=s.opacity;
+    for(let i=0;i<s.count;i++){
+      const fx=s.x+i*14-s.count*7,fy=s.y+Math.sin(Date.now()*0.002+i)*4;
+      ctx.fillStyle='#7dd4f0';
+      ctx.beginPath();ctx.ellipse(fx,fy,5,2.5,s.dx<0?Math.PI:0,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  });
+
+  // bubbles
+  bubbles.forEach(b=>{
+    b.y-=b.speed;
+    if(b.y<wY)b.y=wY+Math.random()*(H*0.5);
+    ctx.save();ctx.globalAlpha=b.alpha;
+    ctx.strokeStyle='rgba(180,230,255,0.5)';ctx.lineWidth=0.5;
+    ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.stroke();
+    ctx.restore();
+  });
+
+  // ripples
+  ripples=ripples.filter(r=>{
+    r.r+=r.speed;r.alpha-=0.018;
+    if(r.alpha<=0)return false;
+    ctx.save();ctx.globalAlpha=r.alpha;
+    ctx.strokeStyle='rgba(180,230,255,0.7)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.ellipse(r.x,r.y,r.r,r.r*0.4,0,0,Math.PI*2);ctx.stroke();
+    ctx.restore();
+    return true;
+  });
+
+  // splashes
+  splashes=splashes.filter(s=>{
+    s.x+=s.vx;s.y+=s.vy;s.vy+=0.15;s.alpha-=0.03;
+    if(s.alpha<=0)return false;
+    ctx.save();ctx.globalAlpha=s.alpha;
+    ctx.fillStyle='rgba(180,230,255,0.8)';
+    ctx.beginPath();ctx.arc(s.x,s.y,s.size,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+    return true;
+  });
+
+  // angler (stick figure on bank)
+  const ax=80, ay=bY;
+  ctx.strokeStyle='#c8e6f0';ctx.lineWidth=2;ctx.lineCap='round';
+  // body
+  ctx.beginPath();ctx.moveTo(ax,ay-28);ctx.lineTo(ax,ay-14);ctx.stroke();
+  // head
+  ctx.beginPath();ctx.arc(ax,ay-32,5,0,Math.PI*2);ctx.stroke();
+  // legs
+  ctx.beginPath();ctx.moveTo(ax,ay-14);ctx.lineTo(ax-6,ay);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(ax,ay-14);ctx.lineTo(ax+6,ay);ctx.stroke();
+  // rod arm
+  ctx.beginPath();ctx.moveTo(ax,ay-24);ctx.lineTo(ax+12,ay-30);ctx.stroke();
+
+  // fishing line
+  if(state!=='idle' && linePoints.length>1){
+    ctx.save();
+    ctx.strokeStyle='rgba(220,240,255,0.6)';ctx.lineWidth=1;
+    ctx.setLineDash([4,3]);
+    ctx.beginPath();
+    ctx.moveTo(ax+12,ay-30);
+    // curve through linePoints
+    linePoints.forEach((p,i)=>{
+      if(i===0)ctx.moveTo(p.x,p.y);
+      else ctx.lineTo(p.x,p.y);
+    });
+    ctx.stroke();ctx.setLineDash([]);ctx.restore();
+  }
+
+  // fly / lure on water
+  if(state==='drifting'||state==='bite'||state==='fighting'){
+    const fly=FLIES[selectedFly];
+    ctx.save();ctx.font='18px serif';
+    ctx.globalAlpha=0.9;
+    ctx.fillText(fly.icon, flyX-9, flyY+6);
+    ctx.restore();
+    // ripple at fly
+    if(Math.random()<0.02) addRipple(flyX, flyY);
+  }
+
+  // fighting fish visible
+  if(state==='fighting' && currentFish){
+    const t=Math.sin(Date.now()*0.008)*30;
+    ctx.save();ctx.font='22px serif';
+    ctx.globalAlpha=0.7;
+    ctx.fillText(currentFish.emoji, fishX+t-11, fishY);
+    ctx.restore();
+  }
+}
+
+// ── DRAW LINE POINTS ─────────────────────────────
+function computeLine(){
+  const ax=92, ay=bankY()-30;
+  if(state==='idle'||state==='charging')return;
+  linePoints=[];
+  const steps=10;
+  for(let i=0;i<=steps;i++){
+    const t=i/steps;
+    // catenary-ish curve
+    const x=ax+(flyX-ax)*t;
+    const sag=Math.sin(t*Math.PI)*((flyX-ax)*0.15);
+    const y=ay+(flyY-ay)*t + sag;
+    linePoints.push({x,y});
+  }
+}
+
+// ── START GAME ───────────────────────────────────
+function startGame(){
+  score=0;caught=0;streak=0;bestFish=null;timeLeft=90;
+  state='idle';power=0;
+  ripples=[];splashes=[];
+  initSchools();initBubbles();
+  updateUI();
+  document.getElementById('gameOver').style.display='none';
+  scheduleHatch();
+  clearInterval(gameInterval);
+  gameInterval=setInterval(()=>{
+    if(state==='over')return;
+    timeLeft--;
+    document.getElementById('timeVal').textContent=timeLeft;
+    if(timeLeft<=0) endGame();
+  },1000);
+}
+
+function endGame(){
+  state='over';
+  clearInterval(gameInterval);
+  clearTimeout(biteTimeout);
+  hideAll();
+  document.getElementById('finalScore').textContent=score;
+  document.getElementById('bestCatch').textContent=
+    bestFish?`Best catch: ${bestFish.emoji} ${bestFish.name} (${bestFish.w}" · ${bestFish.pts}pts)`:'No fish caught today.';
+  document.getElementById('gameOver').style.display='flex';
+}
+
+// ── HATCH SYSTEM ─────────────────────────────────
+function scheduleHatch(){
+  if(state==='over')return;
+  const delay=15000+Math.random()*20000;
+  setTimeout(()=>{
+    if(state==='over')return;
+    currentHatch=HATCHES[Math.floor(Math.random()*HATCHES.length)];
+    const el=document.getElementById('hatchAlert');
+    document.getElementById('hatchInsect').textContent=currentHatch.insect;
+    el.style.display='block';
+    setTimeout(()=>{el.style.display='none';currentHatch=null;scheduleHatch();},8000);
+    scheduleHatch();
+  },delay);
+}
+
+// ── CAST MECHANICS ───────────────────────────────
+function startCharge(){
+  if(state!=='idle')return;
+  state='charging';
+  power=0;powerDir=1;
+  document.getElementById('castHint').style.display='none';
+  document.getElementById('powerWrap').style.display='block';
+}
+
+function releaseCast(){
+  if(state!=='charging')return;
+  state='drifting';
+  document.getElementById('powerWrap').style.display='none';
+
+  // pick a landing spot on the water
+  const W=canvas.width;
+  const wY=waterY();
+  const castDist=0.3+power*0.5; // 30–80% of river width
+  flyTargetX = 120 + castDist*(W*0.65);
+  flyTargetY = wY + 8 + Math.random()*30;
+  flyX=92; flyY=bankY()-30;
+
+  addSplash(flyTargetX, flyTargetY);
+  addRipple(flyTargetX, flyTargetY);
+
+  // animate fly to target
+  let prog=0;
+  const castAnim=setInterval(()=>{
+    prog+=0.07;
+    flyX=92+(flyTargetX-92)*Math.min(prog,1);
+    const arc=Math.sin(Math.min(prog,1)*Math.PI)*-60;
+    flyY=(bankY()-30)+((flyTargetY-(bankY()-30))*Math.min(prog,1))+arc;
+    if(prog>=1){
+      clearInterval(castAnim);
+      flyX=flyTargetX;flyY=flyTargetY;
+      scheduleBite();
+    }
+  },16);
+}
+
+// ── BITE SYSTEM ──────────────────────────────────
+function scheduleBite(){
+  // check fly match
+  const fly=FLIES[selectedFly];
+  let matchBonus=1;
+  if(currentHatch && fly.bonus.includes(currentHatch.type)) matchBonus=1.5;
+  const baseDelay=currentHatch?2000:4000;
+  const delay=baseDelay+Math.random()*4000;
+
+  biteTimeout=setTimeout(()=>{
+    if(state!=='drifting')return;
+    // pick fish weighted by fly type
+    currentFish=FISH[Math.floor(Math.random()*FISH.length)];
+    fishX=flyTargetX; fishY=flyTargetY+40;
+    state='bite';
+    addSplash(flyX,flyY);addRipple(flyX,flyY);
+    document.getElementById('biteWrap').style.display='flex';
+
+    // miss window: 2.5 seconds
+    biteTimeout=setTimeout(()=>{
+      if(state==='bite'){
+        state='idle';
+        document.getElementById('biteWrap').style.display='none';
+        showMiss('Too slow!');
+        streak=0;updateUI();
+        returnToIdle();
+      }
+    },2500);
+  },delay);
+}
+
+function setHook(){
+  if(state!=='bite')return;
+  clearTimeout(biteTimeout);
+  document.getElementById('biteWrap').style.display='none';
+  state='fighting';
+  startFight();
+}
+
+// ── FIGHT SYSTEM ─────────────────────────────────
+let fightInterval=null;
+function startFight(){
+  fightMarker=50;fightZone=35;fightProgress=0;
+  fightSpeed=0.4+Math.random()*0.4;
+  fightDir=Math.random()<0.5?1:-1;
+  document.getElementById('fightWrap').style.display='flex';
+  updateFightUI();
+
+  fightInterval=setInterval(()=>{
+    if(state!=='fighting'){clearInterval(fightInterval);return;}
+    // zone drifts
+    fightZone+=fightDir*fightSpeed;
+    if(fightZone<=5||fightZone>=65){fightDir*=-1;fightSpeed=0.3+Math.random()*0.5;}
+    // marker drifts toward edge
+    fightMarker+=(Math.random()-0.48)*1.2;
+    fightMarker=Math.max(0,Math.min(100,fightMarker));
+    // check if in zone
+    const inZone=(fightMarker>=fightZone && fightMarker<=fightZone+30);
+    if(inZone) fightProgress+=1.2;
+    else fightProgress=Math.max(0,fightProgress-0.6);
+    updateFightUI();
+    if(fightProgress>=100) landFish();
+    if(fightMarker<=0||fightMarker>=100){
+      // fish escaped
+      clearInterval(fightInterval);
+      state='idle';
+      document.getElementById('fightWrap').style.display='none';
+      showMiss('Fish got away! 😔');
+      streak=0;updateUI();
+      returnToIdle();
+    }
+  },50);
+}
+
+function reelIn(){
+  if(state!=='fighting')return;
+  fightMarker=Math.max(0,fightMarker-6);
+}
+
+function updateFightUI(){
+  document.getElementById('fightZone').style.left=fightZone+'%';
+  document.getElementById('fightMarker').style.left=fightMarker+'%';
+  document.getElementById('fightProgressFill2').style.width=fightProgress+'%';
+}
+
+function landFish(){
+  clearInterval(fightInterval);
+  state='caught';
+  document.getElementById('fightWrap').style.display='none';
+
+  const fly=FLIES[selectedFly];
+  let matchBonus=(currentHatch && fly.bonus.includes(currentHatch.type));
+  const w=currentFish.weight[0]+Math.floor(Math.random()*(currentFish.weight[1]-currentFish.weight[0]));
+  const pts=Math.round(currentFish.score*(w/14)*(matchBonus?1.5:1)*(1+streak*0.1));
+  score+=pts;caught++;streak++;
+
+  if(!bestFish||pts>bestFish.pts) bestFish={...currentFish,w,pts};
+
+  addSplash(flyX,flyY);
+  document.getElementById('catchEmoji').textContent=currentFish.emoji;
+  document.getElementById('catchSpecies').textContent=currentFish.name;
+  document.getElementById('catchSize').textContent=`${w}" · ${w<12?'Small':'Large'} fish`;
+  document.getElementById('catchScore').textContent=`+${pts} pts`;
+  document.getElementById('catchBonus').textContent=matchBonus?'🎯 Fly match bonus! ×1.5':'';
+  document.getElementById('catchPopup').style.display='block';
+  updateUI();
+}
+
+function returnToIdle(){
+  setTimeout(()=>{
+    if(state==='idle'){
+      document.getElementById('castHint').style.display='block';
+    }
+  },600);
+}
+
+// ── POWER BAR ANIMATION ──────────────────────────
+let powerAnim=null;
+function animatePower(){
+  if(state!=='charging')return;
+  power=Math.max(0,Math.min(1,power+powerDir*0.025));
+  if(power>=1||power<=0)powerDir*=-1;
+  document.getElementById('powerFill').style.width=(power*100)+'%';
+  powerAnim=requestAnimationFrame(animatePower);
+}
+
+// ── UI HELPERS ───────────────────────────────────
+function updateUI(){
+  document.getElementById('scoreVal').textContent=score;
+  document.getElementById('caughtVal').textContent=caught;
+  document.getElementById('streakVal').textContent=streak+(streak>1?'🔥':'');
+}
+
+function showMiss(msg){
+  const el=document.getElementById('missPopup');
+  el.textContent=msg;
+  el.style.display='block';
+  el.style.animation='none';
+  void el.offsetWidth;
+  el.style.animation='fadeUp 1.4s forwards';
+  setTimeout(()=>el.style.display='none',1400);
+}
+
+function hideAll(){
+  document.getElementById('biteWrap').style.display='none';
+  document.getElementById('fightWrap').style.display='none';
+  document.getElementById('catchPopup').style.display='none';
+  document.getElementById('powerWrap').style.display='none';
+  document.getElementById('castHint').style.display='none';
+}
+
+// ── INPUT ─────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'){
+    e.preventDefault();
+    if(state==='idle'){startCharge();animatePower();}
+    else if(state==='fighting'){reelIn();}
+  }
+});
+document.addEventListener('keyup',e=>{
+  if(e.code==='Space' && state==='charging'){
+    cancelAnimationFrame(powerAnim);
+    releaseCast();
+  }
+});
+
+// Unified pointer handler — whole document so clicking anywhere reels
+document.addEventListener('mousedown',e=>{
+  if(e.target.tagName==='BUTTON'||e.target.tagName==='A') return;
+  if(state==='idle'){startCharge();animatePower();}
+  else if(state==='fighting'){reelIn();}
+});
+document.addEventListener('mouseup',e=>{
+  if(e.target.tagName==='BUTTON'||e.target.tagName==='A') return;
+  if(state==='charging'){cancelAnimationFrame(powerAnim);releaseCast();}
+});
+document.addEventListener('touchstart',e=>{
+  if(e.target.tagName==='BUTTON'||e.target.tagName==='A') return;
+  e.preventDefault();
+  if(state==='idle'){startCharge();animatePower();}
+  else if(state==='fighting'){reelIn();}
+},{passive:false});
+document.addEventListener('touchend',e=>{
+  if(e.target.tagName==='BUTTON'||e.target.tagName==='A') return;
+  e.preventDefault();
+  if(state==='charging'){cancelAnimationFrame(powerAnim);releaseCast();}
+},{passive:false});
+
+document.getElementById('setHookBtn').addEventListener('click',setHook);
+document.getElementById('nextCastBtn').addEventListener('click',()=>{
+  document.getElementById('catchPopup').style.display='none';
+  state='idle';
+  document.getElementById('castHint').style.display='block';
+});
+document.getElementById('playAgainBtn').addEventListener('click',startGame);
+
+// Fly buttons
+document.querySelectorAll('.fly-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    if(state!=='idle')return;
+    selectedFly=parseInt(btn.dataset.fly);
+    document.querySelectorAll('.fly-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// ── MAIN LOOP ─────────────────────────────────────
+function loop(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawScene();
+  computeLine();
+  requestAnimationFrame(loop);
+}
+
+// ── INIT ──────────────────────────────────────────
+startGame();
+loop();
+</script>
+</body>
+</html>

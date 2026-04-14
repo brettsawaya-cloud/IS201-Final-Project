@@ -1,0 +1,230 @@
+/* =============================================
+   FLY FISHING PAGE - Custom Stylesheet
+   ============================================= */
+
+/* --- CSS Variables --- */
+:root {
+  --river-blue: #1a3a4a;
+  --water-teal: #2e7d8c;
+  --foam-white: #f4f1eb;
+  --stone-gray: #6b7c8a;
+  --amber: #c8813a;
+  --dark-bg: #0e2230;
+}
+
+/* --- Global Reset & Base --- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--dark-bg);
+  color: var(--foam-white);
+  font-family: 'Georgia', 'Times New Roman', serif;
+  line-height: 1.75;
+}
+
+/* --- Navigation --- */
+#navbar {
+  background-color: var(--river-blue);
+  border-bottom: 2px solid var(--water-teal);
+  padding: 14px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  #navbar ul li a:visited {
+  color: var(--foam-white);
+  a {
+  color: inherit; /* or whatever color you want */
+  text-decoration: none; /* removes underline too, if desired */
+}
+
+a:visited {
+  color: inherit; /* prevents the purple "visited" color */
+}
+}
+}
+}
+
+#navbar .nav-brand {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: var(--amber);
+  text-decoration: none;
+}
+
+#navbar ul {
+  list-style: none;
+  display: flex;
+  gap: 24px;
+}
+
+#navbar ul li a {
+  color: var(--foam-white);
+  text-decoration: none;
+  font-family: 'Trebuchet MS', sans-serif;
+  font-size: 0.9rem;
+}
+
+#navbar ul li a:hover {
+  color: var(--amber);
+}
+
+/* --- Hero Section --- */
+#hero {
+  background-color: var(--river-blue);
+  text-align: center;
+  padding: 60px 20px 50px;
+  border-bottom: 2px solid var(--water-teal);
+}
+
+#hero h1 {
+  font-size: 2.8rem;
+  color: var(--foam-white);
+  margin-bottom: 10px;
+}
+
+#hero h1 span {
+  color: var(--amber);
+}
+
+#hero p.tagline {
+  font-family: 'Trebuchet MS', sans-serif;
+  color: var(--stone-gray);
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+}
+
+/* --- Content Wrapper Div --- */
+#content-wrapper {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px 30px 60px;
+}
+
+/* --- Section Block Div --- */
+.section-block {
+  background-color: var(--river-blue);
+  border-left: 4px solid var(--water-teal);
+  border-radius: 4px;
+  padding: 30px 36px;
+  margin: 40px 0;
+}
+
+.section-block h2 {
+  font-size: 1.7rem;
+  color: var(--amber);
+  margin-bottom: 12px;
+}
+
+.section-block h3 {
+  font-size: 1.1rem;
+  color: var(--water-teal);
+  margin: 16px 0 6px;
+  font-family: 'Trebuchet MS', sans-serif;
+}
+
+.section-block p {
+  color: var(--foam-white);
+  margin-bottom: 12px;
+}
+
+/* --- Image Div --- */
+.fish-img {
+  width: 100%;
+  max-width: 680px;
+  display: block;
+  margin: 20px auto;
+  border-radius: 4px;
+  border: 2px solid var(--water-teal);
+}
+
+.img-caption {
+  text-align: center;
+  font-family: 'Trebuchet MS', sans-serif;
+  font-size: 0.83rem;
+  color: var(--stone-gray);
+  margin-bottom: 16px;
+}
+
+/* --- Lists --- */
+.section-block ol {
+  padding-left: 20px;
+  color: var(--foam-white);
+  margin-bottom: 12px;
+}
+
+.section-block ol li {
+  margin-bottom: 10px;
+}
+
+.section-block ul {
+  list-style: disc;
+  padding-left: 24px;
+  color: var(--foam-white);
+  margin: 4px 0 8px;
+}
+
+.section-block ul li {
+  margin-bottom: 4px;
+  font-size: 0.95rem;
+}
+
+/* --- Video container --- */
+.video-container {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
+  border-radius: 4px;
+  border: 2px solid var(--water-teal);
+  margin: 20px 0;
+}
+
+.video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* --- Tableau container --- */
+.tableau-container {
+  margin: 20px 0;
+  border: 2px solid var(--water-teal);
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: #fff;
+}
+
+/* --- Divider --- */
+.divider {
+  border: none;
+  border-top: 1px solid var(--water-teal);
+  margin: 0 0 18px;
+  opacity: 0.4;
+}
+
+/* --- Footer --- */
+#footer {
+  background-color: var(--river-blue);
+  border-top: 2px solid var(--water-teal);
+  text-align: center;
+  padding: 20px;
+  font-family: 'Trebuchet MS', sans-serif;
+  font-size: 0.85rem;
+  color: var(--stone-gray);
+}
+
+#footer a {
+  color: var(--water-teal);
+  text-decoration: none;
+}
+
+#footer a:hover {
+  text-decoration: underline;
+}
